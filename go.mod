@@ -1,4 +1,4 @@
-module kine-to-etcd
+module github.com/Arvintian/kine-to-etcd
 
 go 1.16
 
