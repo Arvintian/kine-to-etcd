@@ -19,4 +19,4 @@ kine-to-etcd --endpoint sqlite://./tests/state.db --etcd-endpoint http://localho
 
 This tool can help you migrate data from kine to etcd, but can not guarantee all workload works fine, because kine is not etcd, migrated key/value not have reversion data. Maybe your controller list and watch will fail because kine's data not keep the reversion data.
 
-But this tool help you migrate workload's spec from kine to etcd, you can just trigger recreate workload by kubectl, but it is no pain. Maybe You should shutdown you workload when you migrate cluster's data.
+But this tool help you migrate workload's spec from kine to etcd, you can just trigger recreate workload by kubectl, but it is pain. Maybe You should shutdown you workload when you migrate cluster's data.
