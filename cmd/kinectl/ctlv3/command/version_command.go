@@ -1,4 +1,4 @@
-// Copyright 2016 The etcd Authors
+// Copyright 2015 The etcd Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,30 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// etcdctl is a command line application that controls etcd.
-package main
+package command
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/Arvintian/kine-to-etcd/cmd/kinectl/ctlv3"
+	"go.etcd.io/etcd/api/v3/version"
+
+	"github.com/spf13/cobra"
 )
 
-const (
-	apiEnv = "ETCDCTL_API"
-)
-
-func main() {
-	apiv := os.Getenv(apiEnv)
-
-	// unset apiEnv to avoid side-effect for future env and flag parsing.
-	os.Unsetenv(apiEnv)
-	if len(apiv) == 0 || apiv == "3" {
-		ctlv3.MustStart()
-		return
+// NewVersionCommand prints out the version of etcd.
+func NewVersionCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: "Prints the version of etcdctl",
+		Run:   versionCommandFunc,
 	}
+}
 
-	fmt.Fprintf(os.Stderr, "unsupported API version: %v\n", apiv)
-	os.Exit(1)
+func versionCommandFunc(cmd *cobra.Command, args []string) {
+	fmt.Println("etcdctl version:", version.Version)
+	fmt.Println("API version:", version.APIVersion)
 }
