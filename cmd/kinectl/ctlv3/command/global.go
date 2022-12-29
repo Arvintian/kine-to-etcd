@@ -25,9 +25,12 @@ import (
 	"time"
 
 	"github.com/bgentry/speakeasy"
+	kinev3 "github.com/k3s-io/kine/pkg/client"
+	"github.com/k3s-io/kine/pkg/endpoint"
+	kineTLS "github.com/k3s-io/kine/pkg/tls"
 	"go.etcd.io/etcd/client/pkg/v3/srv"
 	"go.etcd.io/etcd/client/pkg/v3/transport"
-	"go.etcd.io/etcd/client/v3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/pkg/v3/cobrautl"
 	"go.etcd.io/etcd/pkg/v3/flags"
 
@@ -175,6 +178,11 @@ func mustClientFromCmd(cmd *cobra.Command) *clientv3.Client {
 	return cfg.mustClient()
 }
 
+func mustKineClientCfgFromCmd(cmd *cobra.Command) kinev3.Client {
+	cfg := clientConfigFromCmd(cmd)
+	return cfg.mustKineClient()
+}
+
 func (cc *clientConfig) mustClient() *clientv3.Client {
 	cfg, err := newClientCfg(cc.endpoints, cc.dialTimeout, cc.keepAliveTime, cc.keepAliveTimeout, cc.scfg, cc.acfg)
 	if err != nil {
@@ -186,6 +194,22 @@ func (cc *clientConfig) mustClient() *clientv3.Client {
 		cobrautl.ExitWithError(cobrautl.ExitBadConnection, err)
 	}
 
+	return client
+}
+
+func (cc *clientConfig) mustKineClient() kinev3.Client {
+	client, err := kinev3.New(endpoint.ETCDConfig{
+		Endpoints: cc.endpoints,
+		TLSConfig: kineTLS.Config{
+			CAFile:   cc.scfg.cacert,
+			CertFile: cc.scfg.cert,
+			KeyFile:  cc.scfg.key,
+		},
+		LeaderElect: true,
+	})
+	if err != nil {
+		cobrautl.ExitWithError(cobrautl.ExitBadConnection, err)
+	}
 	return client
 }
 

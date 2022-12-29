@@ -18,8 +18,8 @@ package ctlv3
 import (
 	"time"
 
+	"github.com/Arvintian/kine-to-etcd/cmd/kinectl/ctlv3/command"
 	"go.etcd.io/etcd/api/v3/version"
-	"go.etcd.io/etcd/etcdctl/v3/ctlv3/command"
 	"go.etcd.io/etcd/pkg/v3/cobrautl"
 
 	"github.com/spf13/cobra"
@@ -73,8 +73,11 @@ func init() {
 
 	rootCmd.AddCommand(
 		command.NewGetCommand(),
+		command.NewKGetCommand(),
 		command.NewPutCommand(),
+		command.NewKPutCommand(),
 		command.NewDelCommand(),
+		command.NewKDelCommand(),
 		command.NewTxnCommand(),
 		command.NewCompactionCommand(),
 		command.NewAlarmCommand(),
