@@ -43,11 +43,6 @@ func main() {
 	app.Usage = "Migrate kine's data to etcd."
 	app.Version = fmt.Sprintf("%s (%s)", version.Version, version.GitCommit)
 	app.Flags = []cli.Flag{
-		// cli.StringFlag{
-		// 	Name:        "listen-address",
-		// 	Value:       "0.0.0.0:2379",
-		// 	Destination: &config.Listener,
-		// },
 		cli.StringFlag{
 			Name:        "endpoint",
 			Usage:       "Storage endpoint (default is sqlite)",
@@ -88,34 +83,6 @@ func main() {
 			Usage:       "Key file for DB connection",
 			Destination: &config.BackendTLSConfig.KeyFile,
 		},
-		// cli.StringFlag{
-		// 	Name:        "server-cert-file",
-		// 	Usage:       "Certificate for etcd connection",
-		// 	Destination: &config.ServerTLSConfig.CertFile,
-		// },
-		// cli.StringFlag{
-		// 	Name:        "server-key-file",
-		// 	Usage:       "Key file for etcd connection",
-		// 	Destination: &config.ServerTLSConfig.KeyFile,
-		// },
-		// cli.IntFlag{
-		// 	Name:        "datastore-max-idle-connections",
-		// 	Usage:       "Maximum number of idle connections retained by datastore. If value = 0, the system default will be used. If value < 0, idle connections will not be reused.",
-		// 	Destination: &config.ConnectionPoolConfig.MaxIdle,
-		// 	Value:       0,
-		// },
-		// cli.IntFlag{
-		// 	Name:        "datastore-max-open-connections",
-		// 	Usage:       "Maximum number of open connections used by datastore. If value <= 0, then there is no limit",
-		// 	Destination: &config.ConnectionPoolConfig.MaxOpen,
-		// 	Value:       0,
-		// },
-		// cli.DurationFlag{
-		// 	Name:        "datastore-connection-max-lifetime",
-		// 	Usage:       "Maximum amount of time a connection may be reused. If value <= 0, then there is no limit.",
-		// 	Destination: &config.ConnectionPoolConfig.MaxLifetime,
-		// 	Value:       0,
-		// },
 		cli.BoolFlag{Name: "debug"},
 	}
 	app.Action = migrate
