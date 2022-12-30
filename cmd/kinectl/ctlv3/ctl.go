@@ -73,7 +73,6 @@ func init() {
 
 	rootCmd.AddCommand(
 		command.NewGetCommand(),
-		command.NewKGetCommand(),
 		command.NewPutCommand(),
 		command.NewKPutCommand(),
 		command.NewDelCommand(),
