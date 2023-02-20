@@ -130,3 +130,8 @@ func migrate(c *cli.Context) error {
 
 	return nil
 }
+
+func init() {
+	config.Listener = "unix://k2e-from.sock"
+	toConfig.Listener = "unix://k2e-to.sock"
+}
