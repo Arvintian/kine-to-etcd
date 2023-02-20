@@ -2,45 +2,27 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"os"
-	"strings"
-	"time"
 
 	"github.com/k3s-io/kine/pkg/client"
 	"github.com/k3s-io/kine/pkg/endpoint"
 	"github.com/k3s-io/kine/pkg/version"
-	certutil "github.com/rancher/dynamiclistener/cert"
 	"github.com/rancher/wrangler/pkg/signals"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	clientv3 "go.etcd.io/etcd/client/v3"
 )
-
-type EtcdConfig struct {
-	Endpoints      string
-	ClientETCDCert string
-	ClientETCDKey  string
-	ETCDServerCA   string
-}
 
 var (
-	config     endpoint.Config
-	etcdConfig EtcdConfig
-)
-
-const (
-	defaultDialTimeout      = 2 * time.Second
-	defaultKeepAliveTime    = 30 * time.Second
-	defaultKeepAliveTimeout = 10 * time.Second
+	config   endpoint.Config
+	toConfig endpoint.Config
 )
 
 func main() {
 	app := cli.NewApp()
 	app.Name = "k2e"
-	app.Usage = "Migrate kine's data to etcd."
+	app.Usage = "Migrate kine's data."
 	app.Version = fmt.Sprintf("%s (%s)", version.Version, version.GitCommit)
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -49,24 +31,24 @@ func main() {
 			Destination: &config.Endpoint,
 		},
 		cli.StringFlag{
-			Name:        "etcd-endpoint",
-			Usage:       "Endpoints for target etcd",
-			Destination: &etcdConfig.Endpoints,
+			Name:        "to-endpoint",
+			Usage:       "Endpoints for target storage",
+			Destination: &toConfig.Endpoint,
 		},
 		cli.StringFlag{
-			Name:        "etcd-ca-file",
-			Usage:       "Client ca file for target etcd",
-			Destination: &etcdConfig.ETCDServerCA,
+			Name:        "to-ca-file",
+			Usage:       "Client ca file for target storage",
+			Destination: &toConfig.BackendTLSConfig.CAFile,
 		},
 		cli.StringFlag{
-			Name:        "etcd-cert-file",
-			Usage:       "Client cert file for target etcd",
-			Destination: &etcdConfig.ClientETCDCert,
+			Name:        "to-cert-file",
+			Usage:       "Client cert file for target storage",
+			Destination: &toConfig.BackendTLSConfig.CertFile,
 		},
 		cli.StringFlag{
-			Name:        "etcd-key-file",
-			Usage:       "Client key file for target etcd",
-			Destination: &etcdConfig.ClientETCDKey,
+			Name:        "to-key-file",
+			Usage:       "Client key file for target storage",
+			Destination: &toConfig.BackendTLSConfig.KeyFile,
 		},
 		cli.StringFlag{
 			Name:        "ca-file",
@@ -112,11 +94,17 @@ func migrate(c *cli.Context) error {
 
 	defer kineClient.Close()
 
-	etcdClient, err := getEtcdClient(ctx, etcdConfig)
+	toEndpoint, err := endpoint.Listen(ctx, toConfig)
 	if err != nil {
 		return err
 	}
-	defer etcdClient.Close()
+
+	toClient, err := client.New(toEndpoint)
+	if err != nil {
+		return err
+	}
+
+	defer toClient.Close()
 
 	values, err := kineClient.List(ctx, "/registry/", 0)
 	if err != nil {
@@ -126,7 +114,12 @@ func migrate(c *cli.Context) error {
 	for _, value := range values {
 		logrus.Infof("Migrating etcd key %s", value.Key)
 		if !c.Bool("debug") {
-			_, err := etcdClient.Put(ctx, string(value.Key), string(value.Data))
+			val, err := toClient.Get(ctx, string(value.Key))
+			if err != nil {
+				err = toClient.Create(ctx, string(value.Key), value.Data)
+			} else {
+				err = toClient.Update(ctx, string(val.Key), val.Modified, val.Data)
+			}
 			if err != nil {
 				return err
 			}
@@ -136,48 +129,4 @@ func migrate(c *cli.Context) error {
 	logrus.Info("Migrating successed")
 
 	return nil
-}
-
-func getEtcdClient(ctx context.Context, cfg EtcdConfig) (*clientv3.Client, error) {
-
-	endpoints := strings.Split(cfg.Endpoints, ",")
-
-	config := clientv3.Config{
-		Endpoints:            endpoints,
-		Context:              ctx,
-		DialTimeout:          defaultDialTimeout,
-		DialKeepAliveTime:    defaultKeepAliveTime,
-		DialKeepAliveTimeout: defaultKeepAliveTimeout,
-	}
-
-	var err error
-	if strings.HasPrefix(endpoints[0], "https://") {
-		config.TLS, err = toTLSConfig(cfg)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return clientv3.New(config)
-}
-
-func toTLSConfig(cfg EtcdConfig) (*tls.Config, error) {
-	if cfg.ClientETCDCert == "" || cfg.ClientETCDKey == "" || cfg.ETCDServerCA == "" {
-		return nil, errors.New("runtime is not ready yet")
-	}
-
-	clientCert, err := tls.LoadX509KeyPair(cfg.ClientETCDCert, cfg.ClientETCDKey)
-	if err != nil {
-		return nil, err
-	}
-
-	pool, err := certutil.NewPool(cfg.ETCDServerCA)
-	if err != nil {
-		return nil, err
-	}
-
-	return &tls.Config{
-		RootCAs:      pool,
-		Certificates: []tls.Certificate{clientCert},
-	}, nil
 }
